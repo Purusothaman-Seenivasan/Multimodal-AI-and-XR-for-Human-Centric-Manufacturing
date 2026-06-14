@@ -1,0 +1,5 @@
+signal,pooled_auc,description
+Instruction-AOI dwell only,0.7784561991256981,gaze fraction inside the instruction AOI
+Fused SNI,0.715961082697183,equal-weight sigmoid fusion of all three signals
+Gaze entropy only,0.6076308567751716,rolling spatial entropy of gaze
+Hand stall only,0.40689781357812227,negative rolling hand-joint motion
