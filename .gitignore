@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local IndustReal data and recording archives
+Data for technical task/
+*_assy_*/
+*_assy_*.zip
