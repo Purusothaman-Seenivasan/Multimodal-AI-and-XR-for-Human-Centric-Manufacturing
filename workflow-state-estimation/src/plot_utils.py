@@ -17,7 +17,7 @@ def _save(fig, save_path):
     return fig
 
 
-# ---- Shared style for the final Part A summary plots ----
+# ---- Shared style for the workflow-state summary plots ----
 PARTA_METHODS = [
     "A3 sensor smooth",
     "A5 sensor K=15",
@@ -128,7 +128,7 @@ def plot_metric_bars(summary_df, metric, label_col="config", save_path=None):
 
 
 # =====================================================================
-# Final Part A summary plots (all driven by the saved CSV tables).
+# Workflow-state summary plots (all driven by the saved CSV tables).
 # =====================================================================
 
 def plot_final_state_heatmap(frame_idx, Y_true, Y_pred, save_path=None):

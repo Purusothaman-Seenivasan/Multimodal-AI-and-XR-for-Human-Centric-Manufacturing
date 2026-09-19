@@ -1,101 +1,145 @@
-# Technical Assignment Submission
+# Multimodal AI and XR for Human-Centric Manufacturing
 
-This repository contains the code for the technical assignment on the IndustReal
-dataset, split into two tasks:
+An experimental perception pipeline for context-aware XR assistance during manual
+assembly. The project uses egocentric RGB, gaze, hand tracking, and head-pose data
+from a Microsoft HoloLens 2 to answer two questions in real time:
 
-- **Task 1 — Cumulative workflow-state estimation** (`task1/`)
-- **Task 2 — Multimodal support-need index** (`task2/`)
+1. **Where is the operator in the assembly workflow?**
+2. **When might the operator benefit from additional guidance?**
 
-The full explanation, methodology, results, and limitations for each task are
-provided in the submitted reports (`report_task1.pdf`, `report_task2.pdf`). This
-README only covers the folder layout and how to run the code.
+The two components are designed as complementary inputs to an XR guidance system:
+workflow state selects the relevant instruction, while the Support-Need Index helps
+decide when to show it.
 
-## Folder Structure
+![Workflow-state prediction summary](workflow-state-estimation/outputs/plots/partA_metric_progression.png)
+
+## Project Components
+
+| Component | Inputs | Method | Output |
+| --- | --- | --- | --- |
+| [Workflow-state estimation](workflow-state-estimation/) | RGB, gaze, hands, head pose | Sensor Random Forest baseline and frozen DINOv2 embeddings with an MLP head and temporal constraints | Cumulative 9-step assembly state and progress |
+| [Support-Need Index](support-need-index/) | Gaze and hand tracking | Gaze entropy, hand-motion stall, and instruction-area dwell fused over a rolling window | Continuous support score and detected support episodes |
+
+```mermaid
+flowchart LR
+    H[HoloLens 2 streams] --> R[RGB frames]
+    H --> S[Gaze, hands, and head pose]
+    R --> D[Frozen DINOv2 encoder]
+    D --> W[Workflow-state estimator]
+    S --> B[Sensor baseline]
+    B --> W
+    S --> N[Support-Need Index]
+    W --> X[Context-aware XR guidance]
+    N --> X
+```
+
+## Key Results
+
+The recorded experiments use four assembly recordings for training and one held-out
+recording for evaluation.
+
+| Experiment | Result |
+| --- | ---: |
+| DINOv2 + MLP + sustained commitment: macro F1 | **0.813** |
+| DINOv2 + MLP + sustained commitment: exact-match accuracy | **0.639** |
+| DINOv2 + MLP + sustained commitment: monotonicity violations | **0** |
+| Fused Support-Need Index: pooled proxy ROC-AUC | **0.716** |
+| Fused Support-Need Index: held-out proxy ROC-AUC | **0.804** |
+
+The Support-Need Index is evaluated against instruction-consulting behaviour because
+the dataset has no direct label for “needs support.” Its ROC-AUC should therefore be
+read as agreement with a weak behavioural proxy, not as human-factors validation.
+
+![Support-Need Index timeline](support-need-index/outputs/plots/sni_timeline_27_assy_0_1.png)
+
+## Repository Layout
 
 ```text
-final_submission/
-  README.md                 # this file
-  report_task1.pdf          # Task 1 report (methodology, results, discussion)
-  report_task2.pdf          # Task 2 report (methodology, results, discussion)
-
-  task1/                    # Task 1 — workflow-state estimation
-    notebooks/
-      01_sensor_baseline.ipynb        # Approach A — sensor baseline
-      02_dinov2_workflow_state.ipynb  # Approach B — DINOv2 RGB
-    src/                              # shared utilities (constants, data, labels, metrics, ...)
-    outputs/
-      sensor/                         # Approach A CSVs + plots
-      dinov2/                         # Approach B CSVs + plots (+ cached embeddings)
-      plots/                          # combined summary figures
-    README.md                         # Task 1 run instructions
-    requirements.txt
-
-  task2/                    # Task 2 — multimodal support-need index
-    notebooks/
-      01_support_need_index.ipynb     # Support-Need Index (SNI) pipeline
-    src/                              # feature + eval utilities (gaze, hand, SNI, ...)
-    outputs/
-      episodes_*.csv                  # per-recording episode tables
-      sni_per_frame.csv               # per-frame SNI signal
-      ablation_auc.csv                # component ablation results
-      recording_auc.csv              # per-recording evaluation
-      plots/                          # SNI timeline, component, and AUC figures
-    requirements.txt
+.
+├── workflow-state-estimation/
+│   ├── notebooks/                 # sensor and DINOv2 experiments
+│   ├── src/                       # data, features, labels, metrics, and post-processing
+│   ├── outputs/                   # result tables, plots, and cached DINOv2 embeddings
+│   ├── README.md
+│   └── requirements.txt
+├── support-need-index/
+│   ├── notebooks/                 # end-to-end SNI experiment
+│   ├── src/                       # gaze, hand, fusion, evaluation, and plotting utilities
+│   ├── outputs/                   # per-frame scores, episodes, ablations, and plots
+│   ├── README.md
+│   └── requirements.txt
+├── report_task1.pdf               # workflow-state methodology and analysis
+└── report_task2.pdf               # support-need methodology and analysis
 ```
 
-## Task 1 — Workflow-State Estimation
+## Getting Started
 
-Cumulative workflow-state estimation on IndustReal. Two approaches are compared:
-
-- **Approach A** — a sensor-feature + sliding-window baseline.
-- **Approach B** — DINOv2 RGB embeddings with downstream smoothing/postprocessing.
-
-The DINOv2 embeddings ship pre-extracted in `task1/outputs/dinov2/cache/*.npz`,
-so notebook 02 runs the full downstream pipeline without a GPU. Delete the cache
-to force re-extraction (this needs `torch`, `torchvision`, `timm`, and `Pillow`).
-
-See `task1/README.md` for detailed run instructions and `report_task1.pdf` for
-the methodology and results.
-
-## Task 2 — Multimodal Support-Need Index
-
-A multimodal support-seeking proxy (the Support-Need Index, SNI) built from gaze
-entropy, hand-motion stall, and instruction-AOI gaze dwell. Notebook
-`01_support_need_index.ipynb` builds the per-frame signal, runs the component
-ablation, and evaluates it per recording.
-
-See `report_task2.pdf` for the methodology and results.
-
-## Setup
-
-Each task has its own `requirements.txt`. Install from the relevant task folder,
-e.g.:
+### 1. Clone the project
 
 ```bash
-pip install -r task1/requirements.txt   # or task2/requirements.txt
+git clone https://github.com/Purusothaman-Seenivasan/Multimodal-AI-and-XR-for-Human-Centric-Manufacturing.git
+cd Multimodal-AI-and-XR-for-Human-Centric-Manufacturing
 ```
 
-Place the dataset next to this folder so the layout is:
+### 2. Create an environment
 
-```text
-<parent>/
-  final_submission/                   # this repo
-  Data for technical task/
-    Data for technical task/
-      train/{22_assy_0_1, 22_assy_2_3, 25_assy_0_1, 25_assy_2_1}/
-      test/{27_assy_0_1}/
-```
-
-The data path is set in each task's `src/constants.py` (`DATA_ROOT`) — adjust it
-if your dataset lives elsewhere.
-
-## Running
+Each component has a separate requirements file. Install one or both depending on
+the experiment you want to run:
 
 ```bash
-jupyter notebook task1/notebooks/    # Task 1
-jupyter notebook task2/notebooks/    # Task 2
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
+
+pip install -r workflow-state-estimation/requirements.txt
+pip install -r support-need-index/requirements.txt
 ```
 
-Run each notebook top to bottom. Each one trains its models / builds its signals,
-writes its result tables to the task's `outputs/`, and draws its plots from those
-saved CSVs.
+Cached DINOv2 embeddings are included, so the downstream workflow-state experiments
+can run without a GPU. Re-extracting embeddings requires PyTorch, torchvision,
+`timm`, and Pillow.
+
+### 3. Prepare the data
+
+Download the [IndustReal dataset](https://github.com/TimSchoonbeek/IndustReal) and
+configure `DATA_ROOT` in each component's `src/constants.py` for your local dataset
+location. Each recording used here contains RGB frames plus `gaze.csv`, `hands.csv`,
+`pose.csv`, `PSR_labels.csv`, and `AR_labels.csv`.
+
+The data itself is not redistributed in this repository.
+
+### 4. Run the notebooks
+
+```bash
+jupyter notebook workflow-state-estimation/notebooks/
+jupyter notebook support-need-index/notebooks/
+```
+
+Run each notebook from top to bottom. Generated CSV tables and figures are written
+to the corresponding `outputs/` directory.
+
+## Design Notes
+
+- Workflow labels are cumulative: once an assembly step is completed, it remains
+  complete in subsequent frames.
+- The visual model uses a frozen DINOv2 ViT-S/14 encoder; only lightweight downstream
+  classifiers and temporal post-processing are compared.
+- Temporal commitment enforces the irreversible nature of assembly progress and
+  removes backward state transitions.
+- The Support-Need Index is interpretable and training-free: its three normalized
+  signals are equally weighted and passed through a sigmoid.
+
+## Scope and Limitations
+
+This is a research prototype built from a small number of recordings. The fixed
+instruction area, support threshold, and model calibration may not transfer directly
+to another workstation, operator, camera view, or procedure. A deployable XR system
+would require broader user evaluation, per-environment calibration, and real-time
+integration testing.
+
+## Dataset Acknowledgement
+
+This project builds on the **IndustReal** dataset introduced by Schoonbeek et al. at
+WACV 2024. See the [dataset repository](https://github.com/TimSchoonbeek/IndustReal)
+and [paper](https://openaccess.thecvf.com/content/WACV2024/html/Schoonbeek_IndustReal_A_Dataset_for_Procedure_Step_Recognition_Handling_Execution_Errors_WACV_2024_paper.html)
+for its license, citation, and full documentation.

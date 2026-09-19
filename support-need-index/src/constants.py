@@ -38,7 +38,7 @@ EPISODE_SIGMA = 1.0
 # AR_labels step names treated as the weak instruction-consulting proxy.
 INSTRUCTION_PROXY_LABELS = {"check_instruction", "browse_instruction"}
 
-# Locate the dataset relative to this file: task2/src -> AI_XR -> Data folder.
+# Locate the dataset relative to this component's src directory.
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(_HERE))
 DATA_ROOT = os.path.join(_PROJECT_ROOT, "Data for technical task", "Data for technical task")
